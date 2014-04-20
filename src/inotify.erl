@@ -1,22 +1,28 @@
 -module(inotify).
--export([start/1, stop/0]).
+-export([start/1, start_link/1, stop/0]).
 -export([test_start/0, test_end/2, test/0]).
 -export([open/0, controlling_process/1, add/3, remove/2, list/0, close/1]).
 
 start(Controller) when is_pid(Controller) ->
-    spawn(fun() ->
-		  register(?MODULE, self()),
-		  process_flag(trap_exit, true),
-		  Port = open_port({spawn, executable()},
-				   [{packet, 2}, binary, exit_status]),
-		  loop(Port, Controller)
-		  %% The following is only used for development and testing
-		  %% try loop(Port, Controller)
-		  %% catch
-		  %%    T:Err ->
-		  %%	  error_logger:error_msg("catch: ~p:~p~n", [T, Err])
-		  %% end
-	  end).
+    fun init/1, % avoid 'function unused' warning
+    spawn(?MODULE, init, [Controller]).
+
+start_link(Controller) when is_pid(Controller) ->
+    fun init/1, % avoid 'function unused' warning
+    spawn_link(?MODULE, init, [Controller]).
+
+init(Controller) when is_pid(Controller) ->
+    register(?MODULE, self()),
+    process_flag(trap_exit, true),
+    Port = open_port({spawn, executable()},
+           [{packet, 2}, binary, exit_status]),
+    loop(Port, Controller).
+    %% The following is only used for development and testing
+    %% try loop(Port, Controller)
+    %% catch
+    %%    T:Err ->
+    %%      error_logger:error_msg("catch: ~p:~p~n", [T, Err])
+    %% end
 
 stop() ->
     ?MODULE ! stop.
@@ -189,19 +195,3 @@ take_first(F,[H|T]) ->
   try F(H)
   catch _:_ -> take_first(F,T)
   end.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
