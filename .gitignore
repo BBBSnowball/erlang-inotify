@@ -14,3 +14,5 @@ inotify
 compile
 configure
 
+/.*/
+/ebin/

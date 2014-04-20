@@ -1,0 +1,3 @@
+{application, erlang_inotify,
+ [{description, "erlang binding to inotify"},
+  {vsn, "0.3"}]}.
