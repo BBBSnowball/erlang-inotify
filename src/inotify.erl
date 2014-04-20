@@ -4,12 +4,10 @@
 -export([open/0, controlling_process/1, add/3, remove/2, list/0, close/1]).
 
 start(Controller) when is_pid(Controller) ->
-    fun init/1, % avoid 'function unused' warning
-    spawn(?MODULE, init, [Controller]).
+    spawn(fun () -> init(Controller) end).
 
 start_link(Controller) when is_pid(Controller) ->
-    fun init/1, % avoid 'function unused' warning
-    spawn_link(?MODULE, init, [Controller]).
+    spawn_link(fun () -> init(Controller) end).
 
 init(Controller) when is_pid(Controller) ->
     register(?MODULE, self()),
@@ -179,7 +177,9 @@ loop(Port, Controller) ->
 
 executable() ->
   Parts = [[filename:dirname(code:which(?MODULE)),"..",c_src],
-           [code:priv_dir(inotify),bin]],
+           [filename:dirname(code:which(?MODULE)),"..",priv,bin],
+           [code:priv_dir(inotify),bin],
+           [code:priv_dir(erlang_inotify),bin]],
   try E = take_first(fun to_file/1, Parts),
       io:fwrite("using: ~p~n",[E]),
       E
