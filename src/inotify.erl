@@ -4,10 +4,10 @@
 -export([open/0, controlling_process/1, add/3, remove/2, list/0, close/1]).
 
 start(Controller) when is_pid(Controller) ->
-    spawn(fun () -> init(Controller) end).
+    wait(spawn(fun () -> init(Controller) end)).
 
 start_link(Controller) when is_pid(Controller) ->
-    spawn_link(fun () -> init(Controller) end).
+    wait(spawn_link(fun () -> init(Controller) end)).
 
 init(Controller) when is_pid(Controller) ->
     register(?MODULE, self()),
@@ -21,6 +21,15 @@ init(Controller) when is_pid(Controller) ->
     %%    T:Err ->
     %%      error_logger:error_msg("catch: ~p:~p~n", [T, Err])
     %% end
+
+wait(Pid) ->
+    Ref = make_ref(),
+    Pid ! { ping, self(), Ref },
+    receive
+        { pong, Ref } -> Pid
+    after 500 ->
+        error(timeout)
+    end.
 
 stop() ->
     ?MODULE ! stop.
@@ -160,6 +169,9 @@ loop(Port, Controller) ->
 		%%    io:format("received: ~p~n", [Other])
 	    end,
 	    loop(Port, Controller);
+    {ping, Caller, Ref} ->
+        Caller ! { pong, Ref },
+        loop(Port, Controller);
 	{Port, {data, Msg}} ->
 	    Controller ! binary_to_term(Msg),
 	    loop(Port, Controller);
