@@ -73,7 +73,7 @@ int main() {
   int   index, version, arity;
   int   size = BUFFER_SIZE;
   int   cmdpos, result;
-  char  inbuf[BUFFER_SIZE];
+  char *inbuf;
   char  command[MAXATOMLEN];
 
   /* varables for pselect */
@@ -88,6 +88,12 @@ int main() {
   
   }
 
+  inbuf = (char*) malloc(BUFFER_SIZE);
+  if (!inbuf) {
+    perror("malloc");
+    exit(1);
+  }
+
   cmdpos = 0;
   maxfd = setup_select(nlist, &readfds);
   
@@ -95,7 +101,7 @@ int main() {
     if FD_ISSET(0, &readfds) {
       memset(inbuf, 0, BUFFER_SIZE);
       index = 0;
-      result = read_cmd(inbuf, &size, &cmdpos);
+      result = read_cmd(&inbuf, &size, &cmdpos);
 
       if (result == 0) {
 	exit(1);
@@ -122,6 +128,7 @@ int main() {
 
     maxfd = setup_select(nlist, &readfds);
   }
+  free(inbuf);
   exit(10);
 }
 

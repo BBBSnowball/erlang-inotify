@@ -16,11 +16,12 @@
  *            1 when there is more to read
  *            2 when the message is complete
  */
-int read_cmd(char *buf, int *size, int *curpos)
+int read_cmd(char **pbuf, int *size, int *curpos)
 {
   int len;
   int count;
   int desired;
+  char *buf = *pbuf;
 
   if (*curpos < 2) {
     /* read header */
@@ -41,8 +42,9 @@ int read_cmd(char *buf, int *size, int *curpos)
   desired = len - *curpos + 2;
 
   /* check buffer size and realloc if necessary */
-  if (len > *size) {
-    buf = (char *) realloc(buf, len);
+  if (len+2 > *size) {
+    buf = (char *) realloc(buf, len+2);
+    *pbuf = buf;
     if (buf == NULL)
       return -1;
     *size = len;
