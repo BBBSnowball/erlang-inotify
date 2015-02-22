@@ -143,31 +143,41 @@ close(Fd) when is_integer(Fd) ->
 
 
 call_port(Msg) ->
-    ?MODULE ! {call, self(), Msg},
+    Ref = make_ref(),
+    ?MODULE ! {call, self(), Ref, Msg},
     receive
-	{?MODULE, Result} ->
+	{Ref, {?MODULE, Result}} ->
 	    Result;
-	Other ->
+	{Ref, Other} ->
 	    Other
+    end.
+
+receive_reply_from_port(Port, Controller) ->
+    receive
+    {Port, {data, Data}} ->
+        Term = binary_to_term(Data),
+        case Term of
+            {ok,_}    -> Term;
+            {error,_} -> Term;
+            % This is not the reply, but probably an event -> send to controller and try again
+            _         -> Controller ! Term, receive_reply_from_port(Port, Controller)
+        end;
+    {Port, {exit_status, Status}} when Status > 128 ->
+        exit({port_terminated, Status});
+    {Port, {exit_status, Status}} ->
+        exit({port_terminated, Status});
+    {'EXIT', Port, Reason} ->
+        exit(Reason)
+            %%   following two lines used for development and testing only
+    %% Other ->
+    %%    io:format("received: ~p~n", [Other])
     end.
 
 loop(Port, Controller) ->
     receive
-	{call, Caller, Msg} ->
+	{call, Caller, Ref, Msg} ->
 	    erlang:port_command(Port, term_to_binary(Msg)),
-	    receive
-		{Port, {data, Data}} ->
-		    Caller ! binary_to_term(Data);
-		{Port, {exit_status, Status}} when Status > 128 ->
-		    exit({port_terminated, Status});
-		{Port, {exit_status, Status}} ->
-		    exit({port_terminated, Status});
-		{'EXIT', Port, Reason} ->
-		    exit(Reason)
-                %%   following two lines used for development and testing only
-		%% Other ->
-		%%    io:format("received: ~p~n", [Other])
-	    end,
+        Caller ! {Ref, receive_reply_from_port(Port, Controller)},
 	    loop(Port, Controller);
     {ping, Caller, Ref} ->
         Caller ! { pong, Ref },
