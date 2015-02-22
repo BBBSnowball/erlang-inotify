@@ -203,7 +203,6 @@ executable() ->
            [code:priv_dir(inotify),bin],
            [code:priv_dir(erlang_inotify),bin]],
   try E = take_first(fun to_file/1, Parts),
-      io:fwrite("using: ~p~n",[E]),
       E
   catch _:_ -> exit({inotify_binary_not_found,Parts})
   end.
